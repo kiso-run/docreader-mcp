@@ -142,28 +142,28 @@ Generated with `tests/create_fixtures.py` (requires fpdf2, temporary install). C
 - [x] `uv run pytest tests/ -q` — 56 passed
 - [x] PDF read tests exercise real pypdf extraction (mocks only for large-file truncation tests)
 
-## M6 — Security + robustness fixes (code review)
+## M6 — Security + robustness fixes (code review) ✅
 
 **Path traversal prefix attack (CRITICAL):**
-- [ ] `run.py:_resolve_path()` — replace `str(resolved).startswith(str(ws_resolved))` with `resolved.relative_to(ws_resolved)` (catches sibling directory escape like `/tmp/app-data/` when workspace is `/tmp/app`)
+- [x] `run.py:_resolve_path()` — replace `str(resolved).startswith(str(ws_resolved))` with `resolved.relative_to(ws_resolved)` (catches sibling directory escape like `/tmp/app-data/` when workspace is `/tmp/app`)
 
 **JSON input safety:**
-- [ ] Wrap `json.load(sys.stdin)` in try-except JSONDecodeError — print clean error + exit 1
+- [x] Wrap `json.load(sys.stdin)` in try-except JSONDecodeError — print clean error + exit 1
 
 **Page range edge cases:**
-- [ ] Reversed ranges (e.g. `pages="10-5"`) — auto-reverse instead of silently returning nothing
-- [ ] Leading dash (e.g. `pages="-5"`) — handle gracefully instead of `int('')` crash
+- [x] Reversed ranges (e.g. `pages="10-5"`) — auto-reverse instead of silently returning nothing
+- [x] Leading dash (e.g. `pages="-5"`) — handle gracefully instead of `int('')` crash
 
 **Code cleanup:**
 - [ ] Remove redundant `if all_rows` checks in CSV reader (already guaranteed non-empty)
 - [ ] Simplify `len(indices)` logic in PDF continuation hint
 
 **Tests to add:**
-- [ ] Path traversal lateral escape (`../sibling-dir/file.txt`)
-- [ ] Malformed JSON input via stdin
-- [ ] Reversed page range (`10-5`)
-- [ ] Empty XLSX sheet between populated sheets
-- [ ] `uv run pytest tests/ -q` passes
+- [x] Path traversal lateral escape (`../sibling-dir/file.txt`)
+- [x] Malformed JSON input via stdin
+- [x] Reversed page range (`10-5`)
+- [x] Empty XLSX sheet between populated sheets
+- [x] `uv run pytest tests/ -q` passes — 60 tests
 
 ## Known Issues
 

@@ -451,6 +451,17 @@ class TestPathTraversal:
         result = _resolve_path(str(workspace), {"file_path": "uploads/hello.txt"})
         assert result.name == "hello.txt"
 
+    def test_traversal_lateral_escape(self, tmp_path):
+        """Sibling directory escape via prefix attack: /tmp/workspace vs /tmp/workspace-data."""
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        sibling = tmp_path / "workspace-data"
+        sibling.mkdir()
+        secret = sibling / "file.txt"
+        secret.write_text("secret")
+        with pytest.raises(ValueError, match="traversal"):
+            _resolve_path(str(workspace), {"file_path": "../workspace-data/file.txt"})
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -491,6 +502,11 @@ class TestParsePageRanges:
     def test_negative_page(self):
         with pytest.raises(ValueError):
             _parse_page_ranges("-1", 10)
+
+    def test_reversed_page_range(self):
+        """Reversed range like '10-5' auto-reverses to pages 5-10 (0-based: 4-9)."""
+        result = _parse_page_ranges("10-5", 20)
+        assert result == [4, 5, 6, 7, 8, 9]
 
 
 class TestFormatSize:
@@ -594,3 +610,48 @@ class TestFunctional:
         )
         assert result.returncode == 1
         assert "unknown" in result.stderr.lower() or "unknown" in result.stdout.lower()
+
+    def test_malformed_json_stdin(self, workspace):
+        """Malformed JSON input → exit 1, stderr contains error."""
+        result = subprocess.run(
+            [sys.executable, "run.py"],
+            input="not json", capture_output=True, text=True,
+            cwd=str(Path(__file__).parent.parent),
+        )
+        assert result.returncode == 1
+        assert "invalid json" in result.stderr.lower() or "json" in result.stderr.lower()
+
+
+# ---------------------------------------------------------------------------
+# XLSX edge case: empty sheet between populated sheets
+# ---------------------------------------------------------------------------
+
+
+class TestXlsxEmptySheetBetween:
+    def test_empty_sheet_between_populated(self, workspace):
+        """XLSX with Sheet1 (data), Sheet2 (empty), Sheet3 (data) → both data sheets shown."""
+        from openpyxl import Workbook
+        f = workspace / "uploads" / "gaps.xlsx"
+        wb = Workbook()
+
+        ws1 = wb.active
+        ws1.title = "Sheet1"
+        ws1.append(["ID", "Name"])
+        ws1.append([1, "Alice"])
+
+        ws2 = wb.create_sheet("Sheet2")
+        # intentionally empty
+
+        ws3 = wb.create_sheet("Sheet3")
+        ws3.append(["Key", "Value"])
+        ws3.append(["color", "blue"])
+
+        wb.save(str(f))
+
+        result = do_read(str(workspace), {"file_path": "uploads/gaps.xlsx"})
+        assert "Sheet: Sheet1" in result
+        assert "Alice" in result
+        assert "Sheet: Sheet3" in result
+        assert "blue" in result
+        # Sheet2 is empty — should not appear as a data section
+        assert "Sheet: Sheet2" not in result

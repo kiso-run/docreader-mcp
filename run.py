@@ -31,7 +31,11 @@ _TEXT_EXTENSIONS = frozenset({
 
 
 def main() -> None:
-    data = json.load(sys.stdin)
+    try:
+        data = json.load(sys.stdin)
+    except json.JSONDecodeError as e:
+        print(f"Invalid JSON input: {e}", file=sys.stderr)
+        sys.exit(1)
     args = data.get("args", {})
     workspace = data.get("workspace", ".")
 
@@ -351,7 +355,9 @@ def _resolve_path(workspace: str, args: dict) -> Path:
     resolved = (Path(workspace) / file_path).resolve()
     # Path traversal guard
     ws_resolved = Path(workspace).resolve()
-    if not str(resolved).startswith(str(ws_resolved)):
+    try:
+        resolved.relative_to(ws_resolved)
+    except ValueError:
         raise ValueError(f"Path traversal denied: {file_path}")
     if not resolved.is_file():
         raise FileNotFoundError(resolved.name)
@@ -364,9 +370,17 @@ def _parse_page_ranges(spec: str, total: int) -> list[int]:
     for part in spec.split(","):
         part = part.strip()
         if "-" in part:
-            start, end = part.split("-", 1)
-            start_i = max(0, int(start) - 1)
-            end_i = min(total, int(end))
+            start_s, end_s = part.split("-", 1)
+            try:
+                start_val = int(start_s)
+                end_val = int(end_s)
+            except ValueError:
+                raise ValueError(f"Invalid page range: {part!r}")
+            # Auto-reverse if start > end (e.g. "10-5" → "5-10")
+            if start_val > end_val:
+                start_val, end_val = end_val, start_val
+            start_i = max(0, start_val - 1)
+            end_i = min(total, end_val)
             indices.extend(range(start_i, end_i))
         else:
             i = int(part) - 1
