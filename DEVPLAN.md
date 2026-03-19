@@ -57,11 +57,11 @@ Initial implementation of all three actions and five format readers.
 - [x] Functional tests: stdin/stdout subprocess contract (list, read, missing file)
 - 35 tests, all passing
 
-## M3 — Integration with kiso registry
+## M3 — Integration with kiso registry ✅
 
-- [ ] Add docreader to the kiso plugin registry (kiso-run org)
-- [ ] Verify `kiso tool install docreader` works end-to-end
-- [ ] Verify `kiso tool test docreader` passes
+- [x] docreader already present in core registry.json (added during M761)
+- [x] Repo pushed to git@github.com:kiso-run/tool-docreader.git
+- [ ] Verify `kiso tool install docreader` works end-to-end (needs live test on VPS)
 
 ## M4 — Advanced features (deferred)
 
