@@ -63,15 +63,6 @@ Initial implementation of all three actions and five format readers.
 - [x] Repo pushed to git@github.com:kiso-run/tool-docreader.git
 - [ ] Verify `kiso tool install docreader` works end-to-end (needs live test on VPS)
 
-## M4 — Advanced features (deferred)
-
-- [ ] Table extraction from PDF (structured tables, not just text)
-- [ ] Image extraction from DOCX/PDF (save to pub/)
-- [ ] OCR fallback for scanned PDFs (tesseract)
-- [ ] Password-protected PDF/DOCX support
-
----
-
 ## Known Issues
 
 - pypdf text extraction quality varies by PDF — scanned PDFs produce empty text (no OCR)
