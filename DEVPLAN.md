@@ -169,3 +169,15 @@ Generated with `tests/create_fixtures.py` (requires fpdf2, temporary install). C
 
 - pypdf text extraction quality varies by PDF — scanned PDFs produce empty text (no OCR)
 - XLSX read_only mode may not evaluate formulas (data_only=True helps but not always)
+
+---
+
+### M7 — Declare `consumes` in kiso.toml (core M826)
+
+**Context:** Core M826 adds a `consumes` field to `[kiso.tool]` in kiso.toml. The planner uses
+this to auto-route session workspace files to the right tool. Vocabulary: `image`, `document`,
+`audio`, `video`, `code`, `web_page`.
+
+**Changes:**
+- [x] Add `consumes = ["document"]` to `[kiso.tool]` in kiso.toml
+- [ ] Enrich `usage_guide` with concrete arg examples and supported formats list

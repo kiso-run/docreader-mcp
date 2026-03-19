@@ -6,6 +6,7 @@ description = "Extract text from documents — PDF, DOCX, CSV, XLSX, and plain t
 
 [kiso.tool]
 summary = "Read and extract text from PDF, DOCX, CSV, XLSX, and plain text files"
+consumes = ["document"]
 usage_guide = """\
 Use this tool to extract text content from document files in the session workspace. \
 Supports PDF, DOCX, CSV, XLSX, and plain text formats. Files are typically found in \
