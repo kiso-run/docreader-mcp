@@ -189,7 +189,7 @@ def _read_pdf(path: Path, pages_arg: str | None = None) -> str:
         )
         if pages_arg:
             hint = (
-                f"\n\nShowing {len(parts)} of {len(list(indices)) if not isinstance(indices, range) else len(indices)} requested pages (budget reached). "
+                f"\n\nShowing {len(parts)} of {len(indices)} requested pages (budget reached). "
                 f'Use pages="{next_start}-{next_end}" to read more.'
             )
         return f"{header}\n\n{body}{hint}"
@@ -294,8 +294,8 @@ def _read_csv(path: Path) -> str:
 
     total_rows = len(all_rows)
     # Extract column names from first row
-    col_names = ", ".join(all_rows[0]) if all_rows else ""
-    n_cols = len(all_rows[0]) if all_rows else 0
+    col_names = ", ".join(all_rows[0])
+    n_cols = len(all_rows[0])
     header = f"Dataset: {path.name} ({total_rows} rows, {n_cols} columns)\nColumns: {col_names}"
 
     lines: list[str] = []

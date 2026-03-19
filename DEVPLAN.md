@@ -155,8 +155,8 @@ Generated with `tests/create_fixtures.py` (requires fpdf2, temporary install). C
 - [x] Leading dash (e.g. `pages="-5"`) — handle gracefully instead of `int('')` crash
 
 **Code cleanup:**
-- [ ] Remove redundant `if all_rows` checks in CSV reader (already guaranteed non-empty)
-- [ ] Simplify `len(indices)` logic in PDF continuation hint
+- [x] Removed redundant `if all_rows` checks in CSV reader (already guaranteed non-empty after early return)
+- [x] Simplified `len(indices)` — `len()` works on `range` directly, no type check needed
 
 **Tests to add:**
 - [x] Path traversal lateral escape (`../sibling-dir/file.txt`)
