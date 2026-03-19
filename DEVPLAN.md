@@ -111,34 +111,36 @@ Initial implementation of all three actions and five format readers.
 
 ### Static fixtures (`tests/fixtures/`)
 
-Generate once with a setup script, commit to repo. No network dependency, no mocks for basic read paths.
+Generated with `tests/create_fixtures.py` (requires fpdf2, temporary install). Committed to repo.
 
-- [ ] `sample.pdf` — 3 pages with real text (use reportlab or fpdf2 to generate a PDF with actual embedded text)
-- [ ] `sample.docx` — 2 paragraphs + a heading
-- [ ] `sample.xlsx` — 2 sheets ("Sales" with 5 rows, "Summary" with 2 rows)
-- [ ] `sample.csv` — header + 5 data rows
-- [ ] `sample.txt` — 10 lines of plain text
-- [ ] `create_fixtures.py` — one-time script to regenerate fixtures if needed
+- [x] `sample.pdf` — 3 pages with real embedded text (fpdf2), verified pypdf extraction works
+- [x] `sample.docx` — heading + 2 paragraphs (Flask, Docker content)
+- [x] `sample.xlsx` — 2 sheets: "Sales" (5 data rows), "Summary" (2 data rows)
+- [x] `sample.csv` — header + 5 data rows (id, name, email, role, active)
+- [x] `sample.txt` — 10 lines (server config notes)
+- [x] `create_fixtures.py` — one-time script to regenerate fixtures
 
 ### Migrate existing tests to use fixtures
 
-- [ ] `test_read_pdf_with_text` — use `sample.pdf` instead of mock; assert actual extracted text
-- [ ] `test_read_docx`, `test_read_xlsx`, `test_read_csv`, `test_read_txt` — use fixtures instead of per-test generated files (keep fixtures as option alongside `tmp_path` tests)
+- [x] `test_read_pdf_with_real_text` — uses `sample.pdf` with real pypdf extraction, no mocks
+- [x] `test_read_pdf_page_ranges_real` — page range with real extraction
+- [x] `test_read_docx`, `test_read_xlsx`, `test_read_csv`, `test_read_txt` — use `workspace_with_fixtures`
+- [x] `do_info` tests migrated to fixtures
 
-### Missing test coverage
+### Missing test coverage (added)
 
-- [ ] `do_read` XLSX with multiple sheets — verify both sheets appear in output with correct headers
-- [ ] `do_info` for DOCX — currently untested
-- [ ] `do_read` empty CSV → "CSV file is empty."
-- [ ] `do_read` empty DOCX (no paragraphs) → "no text content"
-- [ ] `_parse_page_ranges` with invalid input (`"abc"`, `""`, `"0"`, negative numbers)
-- [ ] Functional test: `info` action via stdin/stdout
-- [ ] Functional test: unknown action → exit 1
-- [ ] Smart truncation XLSX with 2+ sheets where truncation happens mid-second-sheet
+- [x] `do_read` XLSX with multiple sheets — `test_read_xlsx_multiple_sheets`
+- [x] `do_info` for DOCX — `test_info_docx`
+- [x] `do_read` empty CSV — `test_read_empty_csv`
+- [x] `do_read` empty DOCX — `test_read_empty_docx`
+- [x] `_parse_page_ranges` edge cases — `test_invalid_non_numeric`, `test_empty_string`, `test_zero_page`, `test_negative_page`
+- [x] Functional test: `info` action via stdin — `test_info_via_stdin`
+- [x] Functional test: unknown action → exit 1 — `test_unknown_action_exits_1`
+- [x] Smart truncation XLSX 2+ sheets — `test_large_xlsx_multi_sheet_truncation`
 
 ### Validation
-- [ ] `uv run pytest tests/ -q` passes
-- [ ] All PDF read tests exercise real pypdf extraction (no mocks for happy path)
+- [x] `uv run pytest tests/ -q` — 56 passed
+- [x] PDF read tests exercise real pypdf extraction (mocks only for large-file truncation tests)
 
 ## Known Issues
 

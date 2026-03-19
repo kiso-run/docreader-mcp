@@ -1,0 +1,10 @@
+Application Configuration Notes
+================================
+
+Server: kiso-prod-01.example.com
+Port: 8334
+Database: PostgreSQL 15 on localhost:5432
+Cache: Redis on localhost:6379
+
+Last updated: 2024-03-15
+Maintainer: ops-team@example.com
