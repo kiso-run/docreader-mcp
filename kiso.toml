@@ -1,10 +1,10 @@
 [kiso]
-type = "tool"
+type = "wrapper"
 name = "docreader"
 version = "0.1.0"
 description = "Extract text from documents — PDF, DOCX, CSV, XLSX, and plain text files"
 
-[kiso.tool]
+[kiso.wrapper]
 summary = "Read and extract text from PDF, DOCX, CSV, XLSX, and plain text files"
 consumes = ["document"]
 usage_guide = """\
@@ -22,7 +22,7 @@ Large PDFs should be read in chunks to avoid excessive output.
 
 The file_path arg is relative to the session workspace (e.g. "uploads/report.pdf")."""
 
-[kiso.tool.args]
+[kiso.wrapper.args]
 action    = { type = "string", required = false, description = "one of: read (default), info, list" }
 file_path = { type = "string", required = false, description = "path to file, relative to workspace (e.g. 'uploads/report.pdf')" }
 pages     = { type = "string", required = false, description = "page range for PDF (e.g. '1-5', '3,7,10-12')" }

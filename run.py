@@ -1,4 +1,4 @@
-"""tool-docreader — extract text from PDF, DOCX, CSV, XLSX, and plain text files.
+"""wrapper-docreader — extract text from PDF, DOCX, CSV, XLSX, and plain text files.
 
 Subprocess contract (same as all kiso tools):
   stdin:  JSON {args, session, workspace, session_secrets, plan_outputs}
