@@ -1,4 +1,47 @@
-# tool-docreader — Development Plan
+# kiso-docreader-mcp — Development Plan
+
+## Status
+
+**Legacy wrapper era — closed.** The `tool-docreader` /
+`wrapper-docreader` subprocess-contract implementation has been
+replaced by a Model Context Protocol server.
+
+**Current era: MCP server.** Tracked in `kiso-run/core` as M1511.
+
+---
+
+## v0.1 — MCP rewrite (2026-04-18)
+
+- [x] Strip legacy wrapper files (`run.py`, `kiso.toml`, `deps.sh`,
+      `validator.py`); preserve `tests/fixtures/sample.*`
+- [x] New `pyproject.toml` with package name `kiso-docreader-mcp`,
+      entry point, MCP SDK dep (alongside pypdf/docx/openpyxl)
+- [x] `src/kiso_docreader_mcp/docreader_runner.py` — per-format
+      readers with semantic-boundary truncation
+- [x] `src/kiso_docreader_mcp/server.py` — FastMCP server with four
+      tools: `read_document`, `document_info`,
+      `list_supported_formats`, `doctor`
+- [x] 28 tests green (per-format success + truncation + page range +
+      metadata + MCP tool registration + delegation)
+- [x] README rewrite
+- [ ] Cut `v0.1.0` tag on GitHub *(user action)*
+
+**Design shifts from wrapper era**:
+
+- **No API key**: this server is pure-Python parsing. Already was,
+  but the README / install flow now makes this explicit.
+- **Dropped the `list` action**: file discovery is the client's job.
+- **Structured return**: each format emits a rich dict with
+  format-specific fields (pages, sheets, columns) instead of a
+  plaintext header + body blob.
+- **No workspace-relative path resolution**: MCP servers trust
+  their client, and per-session workspace scoping is the client's
+  concern (see core M1512).
+
+The content below is the original wrapper-era devplan, kept for
+historical record.
+
+---
 
 Document text extraction tool for kiso. Reads PDF, DOCX, XLSX, CSV, and plain text files from the session workspace.
 

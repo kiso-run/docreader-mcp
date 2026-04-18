@@ -1,66 +1,89 @@
-# tool-docreader
+# kiso-docreader-mcp
 
-Document text extraction tool for [kiso](https://github.com/kiso-run/core). Reads PDF, DOCX, XLSX, CSV, and plain text files.
+Document text extraction exposed as a
+[Model Context Protocol](https://modelcontextprotocol.io) server.
+Reads PDF, DOCX, XLSX, CSV, and plain text files.
 
-## Installation
+Pure-Python — **no API key required**. Ships with `pypdf`,
+`python-docx`, and `openpyxl`.
 
-```bash
-kiso tool install docreader
+Part of the [`kiso-run`](https://github.com/kiso-run) project.
+
+## Install
+
+```sh
+uvx --from git+https://github.com/kiso-run/docreader-mcp@v0.1.0 kiso-docreader-mcp
 ```
 
-## How it works
+## MCP client config
 
-1. Files arrive in the session workspace — typically via connector uploads (`uploads/`), exec tasks (`curl`), or user-placed files.
-2. The planner emits a `tool` task with `tool=docreader` and the file path.
-3. The tool extracts text content and returns it as stdout.
-4. The planner/messenger can then use the extracted text to answer questions or perform analysis.
+```json
+{
+  "mcpServers": {
+    "docreader": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/kiso-run/docreader-mcp@v0.1.0",
+        "kiso-docreader-mcp"
+      ]
+    }
+  }
+}
+```
 
-## Actions
+No environment variables required.
 
-| Action | Description |
-|--------|-------------|
-| `read` | Extract full text content from a file (default action) |
-| `info` | Get file metadata (size, pages, sheets) without full extraction |
-| `list` | List files in the `uploads/` directory |
+## Tools
 
-## Args
+### `read_document(file_path, pages?)`
 
-| Arg | Type | Required | Description |
-|-----|------|----------|-------------|
-| `action` | string | no | One of: read (default), info, list |
-| `file_path` | string | for read/info | Path relative to workspace (e.g. `uploads/report.pdf`) |
-| `pages` | string | no | Page range for PDF files (e.g. `1-5`, `3,7,10-12`) |
+Extract text from a document. `pages` selects a range in PDFs only
+(e.g. `"1-5"`, `"3,7,10-12"`).
+
+Returns a dict always containing `success`, `text`, `format`,
+`truncated`, `stderr`; plus format-specific fields:
+
+- **PDF** — `total_pages`, `pages_returned`
+- **DOCX** / **text** — `total_chars`, `shown_chars`
+- **XLSX** — `sheets`
+- **CSV** — `total_rows`, `shown_rows`, `columns`
+
+Output is truncated at **50 000 chars** at a semantic boundary
+(page, row, paragraph, line). When truncated, the reply exposes
+both the served slice and the full size so the caller can page
+through.
+
+### `document_info(file_path)`
+
+Metadata-only — size, format, pages (PDF), sheets (XLSX), rows (CSV).
+
+### `list_supported_formats()`
+
+Lists known structured and text extensions.
+
+### `doctor()`
+
+`{healthy, issues}` — verifies that `pypdf`, `docx`, and `openpyxl`
+are importable.
 
 ## Supported formats
 
-| Format | Extension | Library | Notes |
-|--------|-----------|---------|-------|
-| PDF | `.pdf` | pypdf | Page-level extraction, supports page ranges |
-| Word | `.docx` | python-docx | Paragraph-level extraction |
-| Excel | `.xlsx` | openpyxl | All sheets, tab-separated values |
-| CSV | `.csv` | stdlib csv | Tab-separated output |
-| Plain text | `.txt`, `.md`, `.json`, `.py`, etc. | stdlib | Read as-is |
+**Structured**: `pdf`, `docx`, `xlsx`, `csv`.
 
-Unknown extensions are tested with a heuristic (85% printable ASCII in first 512 bytes).
+**Plain text** (read as-is): `txt`, `md`, `rst`, `log`, `json`,
+`yaml`, `yml`, `toml`, `ini`, `cfg`, `conf`, `sh`, `bash`, `py`,
+`js`, `ts`, `html`, `htm`, `xml`, `css`, `sql`. Unknown extensions
+are probed with a heuristic (first 512 bytes look textual → treat
+as text).
 
-## Examples
+## Development
 
+```sh
+uv sync
+uv run pytest tests/ -q
 ```
-# Read a PDF
-action="read" file_path="uploads/report.pdf"
-
-# Read specific pages
-action="read" file_path="uploads/report.pdf" pages="1-5"
-
-# Get file metadata
-action="info" file_path="uploads/report.pdf"
-
-# List uploaded files
-action="list"
-```
-
-Output is truncated at 100,000 characters to prevent memory exhaustion on large files.
 
 ## License
 
-MIT
+MIT.
