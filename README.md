@@ -2,17 +2,19 @@
 
 Document text extraction exposed as a
 [Model Context Protocol](https://modelcontextprotocol.io) server.
-Reads PDF, DOCX, XLSX, CSV, and plain text files.
+Reads PDF, DOCX, XLSX, CSV, **PPTX, HTML, Markdown, RTF, ODT, EPUB**,
+and plain text files.
 
-Pure-Python — **no API key required**. Ships with `pypdf`,
-`python-docx`, and `openpyxl`.
+Pure-Python — **no API key required, zero network egress**. Ships with
+`pypdf`, `python-docx`, `openpyxl`, `python-pptx`, `beautifulsoup4`,
+`html2text`, `striprtf`, `odfpy`, and `ebooklib`.
 
 Part of the [`kiso-run`](https://github.com/kiso-run) project.
 
 ## Install
 
 ```sh
-uvx --from git+https://github.com/kiso-run/docreader-mcp@v0.1.0 kiso-docreader-mcp
+uvx --from git+https://github.com/kiso-run/docreader-mcp@v0.2.0 kiso-docreader-mcp
 ```
 
 ## MCP client config
@@ -24,7 +26,7 @@ uvx --from git+https://github.com/kiso-run/docreader-mcp@v0.1.0 kiso-docreader-m
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/kiso-run/docreader-mcp@v0.1.0",
+        "git+https://github.com/kiso-run/docreader-mcp@v0.2.0",
         "kiso-docreader-mcp"
       ]
     }
@@ -45,9 +47,12 @@ Returns a dict always containing `success`, `text`, `format`,
 `truncated`, `stderr`; plus format-specific fields:
 
 - **PDF** — `total_pages`, `pages_returned`
-- **DOCX** / **text** — `total_chars`, `shown_chars`
+- **DOCX** / **text** / **RTF** / **ODT** — `total_chars`, `shown_chars`
 - **XLSX** — `sheets`
 - **CSV** — `total_rows`, `shown_rows`, `columns`
+- **PPTX** — `total_slides`, `slides_returned` (includes speaker notes)
+- **HTML** — `total_chars`, `shown_chars` (output is Markdown)
+- **EPUB** — `chapters_returned`
 
 Output is truncated at **50 000 chars** at a semantic boundary
 (page, row, paragraph, line). When truncated, the reply exposes

@@ -24,6 +24,8 @@ _TEXT_EXTENSIONS = frozenset({
 
 _STRUCTURED_EXTENSIONS = frozenset({
     ".pdf", ".docx", ".xlsx", ".csv",
+    # v0.2.0
+    ".pptx", ".html", ".htm", ".rtf", ".odt", ".epub",
 })
 
 
@@ -42,6 +44,17 @@ def read_document(*, file_path: str, pages: str | None = None) -> dict:
             return _read_xlsx(path)
         if ext == ".csv":
             return _read_csv(path)
+        # v0.2.0 readers
+        if ext == ".pptx":
+            return _read_pptx(path)
+        if ext in (".html", ".htm"):
+            return _read_html(path)
+        if ext == ".rtf":
+            return _read_rtf(path)
+        if ext == ".odt":
+            return _read_odt(path)
+        if ext == ".epub":
+            return _read_epub(path)
         if ext in _TEXT_EXTENSIONS or _is_likely_text(path):
             return _read_text(path)
     except Exception as exc:
@@ -49,7 +62,7 @@ def read_document(*, file_path: str, pages: str | None = None) -> dict:
 
     return _fail(
         f"unsupported format: {ext or '(no extension)'} — "
-        "supported: pdf, docx, xlsx, csv, plain text"
+        "supported: pdf, docx, xlsx, csv, pptx, html, rtf, odt, epub, plain text"
     )
 
 
@@ -99,7 +112,12 @@ def document_info(*, file_path: str) -> dict:
 
 def check_health() -> dict:
     issues: list[str] = []
-    for mod in ("pypdf", "docx", "openpyxl"):
+    required_modules = (
+        "pypdf", "docx", "openpyxl",
+        # v0.2.0 additions
+        "pptx", "bs4", "html2text", "striprtf", "odf", "ebooklib",
+    )
+    for mod in required_modules:
         try:
             __import__(mod)
         except ImportError:
@@ -334,4 +352,200 @@ def _fail(message: str) -> dict:
         "format": None,
         "truncated": False,
         "stderr": message,
+    }
+
+
+# ── v0.2.0 readers ──────────────────────────────────────────────
+
+
+def _read_pptx(path: Path) -> dict:
+    """Extract slide titles + body text + speaker notes from PPTX.
+
+    Output: one section per slide with `# Slide N` header. Tables are
+    serialised as tab-joined rows. Speaker notes get their own block.
+    """
+    from pptx import Presentation
+    prs = Presentation(str(path))
+    parts: list[str] = []
+    total_chars = 0
+    truncated = False
+    total_slides = len(prs.slides)
+
+    for idx, slide in enumerate(prs.slides, start=1):
+        if truncated:
+            break
+        chunks: list[str] = [f"# Slide {idx}"]
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                for para in shape.text_frame.paragraphs:
+                    line = "".join(run.text for run in para.runs).strip()
+                    if line:
+                        chunks.append(line)
+            if shape.has_table:
+                table = shape.table
+                for row in table.rows:
+                    cells = [cell.text.strip() for cell in row.cells]
+                    if any(cells):
+                        chunks.append("\t".join(cells))
+        # Speaker notes
+        if slide.has_notes_slide:
+            notes_text = slide.notes_slide.notes_text_frame.text.strip()
+            if notes_text:
+                chunks.append(f"[Speaker notes]\n{notes_text}")
+        slide_text = "\n".join(chunks)
+        if total_chars + len(slide_text) > _MAX_OUTPUT_CHARS and parts:
+            truncated = True
+            break
+        parts.append(slide_text)
+        total_chars += len(slide_text)
+
+    body = "\n\n".join(parts)
+    return {
+        "success": True,
+        "text": body,
+        "format": "pptx",
+        "total_slides": total_slides,
+        "slides_returned": len(parts),
+        "truncated": truncated,
+        "stderr": "" if parts else "pptx has no text content",
+    }
+
+
+def _read_html(path: Path) -> dict:
+    """Extract main content from HTML, stripping scripts/styles/nav/footer.
+
+    Uses BeautifulSoup4 to drop noise, then html2text to render the
+    remaining body as Markdown — preserves headings/lists/links/tables
+    in an LLM-friendly form.
+    """
+    from bs4 import BeautifulSoup
+    import html2text
+
+    raw = path.read_text(encoding="utf-8", errors="replace")
+    soup = BeautifulSoup(raw, "html.parser")
+    for selector in ("script", "style", "nav", "footer", "noscript", "iframe"):
+        for tag in soup.find_all(selector):
+            tag.decompose()
+    body = soup.body if soup.body is not None else soup
+
+    converter = html2text.HTML2Text()
+    converter.ignore_links = False
+    converter.ignore_images = True
+    converter.body_width = 0  # no hard wrap
+    md_text = converter.handle(str(body)).strip()
+
+    total_chars = len(md_text)
+    if total_chars > _MAX_OUTPUT_CHARS:
+        md_text = md_text[:_MAX_OUTPUT_CHARS]
+        last_newline = md_text.rfind("\n")
+        if last_newline > 0:
+            md_text = md_text[:last_newline]
+        truncated = True
+    else:
+        truncated = False
+
+    return {
+        "success": True,
+        "text": md_text,
+        "format": "html",
+        "total_chars": total_chars,
+        "shown_chars": len(md_text),
+        "truncated": truncated,
+        "stderr": "" if md_text else "html has no visible body content",
+    }
+
+
+def _read_rtf(path: Path) -> dict:
+    """Extract plain text from RTF via the striprtf pure-Python parser."""
+    from striprtf.striprtf import rtf_to_text
+
+    raw = path.read_text(encoding="utf-8", errors="replace")
+    text = rtf_to_text(raw).strip()
+    total_chars = len(text)
+    truncated = False
+    if total_chars > _MAX_OUTPUT_CHARS:
+        text = text[:_MAX_OUTPUT_CHARS]
+        truncated = True
+    return {
+        "success": True,
+        "text": text,
+        "format": "rtf",
+        "total_chars": total_chars,
+        "shown_chars": len(text),
+        "truncated": truncated,
+        "stderr": "" if text else "rtf has no text content",
+    }
+
+
+def _read_odt(path: Path) -> dict:
+    """Extract paragraph + heading text from ODT via odfpy."""
+    from odf import teletype
+    from odf.opendocument import load
+    from odf.text import H, P
+
+    doc = load(str(path))
+    paragraphs: list[str] = []
+    for elem in doc.getElementsByType(P) + doc.getElementsByType(H):
+        line = teletype.extractText(elem).strip()
+        if line:
+            paragraphs.append(line)
+
+    total_chars = sum(len(p) for p in paragraphs)
+    kept: list[str] = []
+    chars = 0
+    for para in paragraphs:
+        if chars + len(para) > _MAX_OUTPUT_CHARS and kept:
+            break
+        kept.append(para)
+        chars += len(para)
+    return {
+        "success": True,
+        "text": "\n\n".join(kept),
+        "format": "odt",
+        "total_chars": total_chars,
+        "shown_chars": chars,
+        "truncated": chars < total_chars,
+        "stderr": "" if kept else "odt has no text content",
+    }
+
+
+def _read_epub(path: Path) -> dict:
+    """Extract chapter text from EPUB.
+
+    Walks ITEM_DOCUMENT entries (XHTML chapters) in spine order, runs
+    each through BeautifulSoup for tag stripping, concats with chapter
+    headers when titles are detectable.
+    """
+    from bs4 import BeautifulSoup
+    import ebooklib
+    from ebooklib import epub
+
+    book = epub.read_epub(str(path))
+    items = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
+    parts: list[str] = []
+    total_chars = 0
+    truncated = False
+    for item in items:
+        if truncated:
+            break
+        soup = BeautifulSoup(item.get_body_content(), "html.parser")
+        for selector in ("script", "style"):
+            for tag in soup.find_all(selector):
+                tag.decompose()
+        chapter_text = soup.get_text("\n", strip=True)
+        if not chapter_text:
+            continue
+        if total_chars + len(chapter_text) > _MAX_OUTPUT_CHARS and parts:
+            truncated = True
+            break
+        parts.append(chapter_text)
+        total_chars += len(chapter_text)
+
+    return {
+        "success": True,
+        "text": "\n\n".join(parts),
+        "format": "epub",
+        "chapters_returned": len(parts),
+        "truncated": truncated,
+        "stderr": "" if parts else "epub has no readable chapters",
     }
